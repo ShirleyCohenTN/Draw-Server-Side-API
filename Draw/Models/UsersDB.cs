@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.Data.SqlClient;
 using System.Configuration;
+using Draw.EncryptDecrypt;
 
 
 
@@ -53,7 +54,7 @@ namespace Draw.Models
             SqlConnection con = new SqlConnection(strCon);
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Users " +
-                $" WHERE email='{email}' AND pass='{pass}'", con);
+                $" WHERE email='{email}' AND pass='{CommonMethods.ConvertToEncrypt(pass)}'", con);
             comm.Connection.Open();
             SqlDataReader reader = comm.ExecuteReader();
             if (reader.Read())
@@ -63,7 +64,7 @@ namespace Draw.Models
                     (string)reader["first_name"],
                     (string)reader["last_name"],
                     (string)reader["email"],
-                    (string)reader["pass"]
+                    CommonMethods.ConvertToDecrypt((string)reader["pass"])
                     );
             }
             comm.Connection.Close();
@@ -140,7 +141,7 @@ namespace Draw.Models
                  $" N'{val.First_Name}'," +
                  $" N'{val.Last_Name}'," +
                  $" N'{val.Email}'," +
-                 $" N'{val.Pass}'); ";
+                 $" N'{CommonMethods.ConvertToEncrypt(val.Pass)}'); ";
 
             strComm +=
                 " SELECT SCOPE_IDENTITY() AS[SCOPE_IDENTITY]; ";
