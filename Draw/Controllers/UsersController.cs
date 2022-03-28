@@ -30,7 +30,7 @@ namespace Draw.Controllers
 
 
         //GET BY ID
-        [Route("{id:int:min(1)}", Name = "GetUserByID")]
+        //[Route("{id:int:min(1)}", Name = "GetUserByID")]
         public IHttpActionResult Get(int user_id)
         {
             try
@@ -70,7 +70,7 @@ namespace Draw.Controllers
 
 
 
-        [Route(Name = "GetUserByEmail")]
+        //[Route(Name = "GetUserByEmail")]
         public IHttpActionResult Get(string email)
         {
             try
@@ -101,10 +101,7 @@ namespace Draw.Controllers
                     return Content(HttpStatusCode.BadRequest, $"User id = {User2Insert.User_ID} was not created in the DB!!!");
                 }
                 User2Insert.User_ID = res;
-                //gives error 400 but it creats a new User:
-                //return Created(new Uri(Url.Link("GetUserByID", new { user_id = res })), User2Insert);
-                
-                //gives status 200 but it doesnt change the right ID, it gives the previous one
+            
                 return Get(res);
 
             }

@@ -4,13 +4,39 @@ using System.Linq;
 using System.Web;
 using System.Text;
 using System.Security.Cryptography;
+using System.Configuration;
 
 namespace Draw.EncryptDecrypt
 {
     public static class CommonMethods
     {
 
-        public static string hash = "jsj#kf@2ak*m^";
+
+        //SHA245 Cryptographically
+        public static string HashString(string passwordString)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in GetHash(passwordString))
+                sb.Append(b.ToString("X3"));
+            return sb.ToString();
+        }
+
+        public static byte[] GetHash(string passwordString)
+        {
+            using (HashAlgorithm algorithm = SHA256.Create())
+                return algorithm.ComputeHash(Encoding.UTF8.GetBytes(passwordString));
+        }
+
+
+
+
+
+
+
+        //-----------------------------------------------------------------------------
+        //MD5 Cryptographically - currently not in use, we use SHA 256
+
+        public static string hash = ConfigurationManager.AppSettings["hash"];
 
         public static string ConvertToEncrypt(string password)
         {
@@ -50,6 +76,10 @@ namespace Draw.EncryptDecrypt
                 }
             }
         }
+
+
+
+ 
 
     }
 }

@@ -48,14 +48,20 @@ namespace Draw.Models
 
 
         //BY EMAIL AND PASS
+
         public Users GetUserByEmailAndPassword(string email, string pass)
         {
             Users u = null;
             SqlConnection con = new SqlConnection(strCon);
             SqlCommand comm = new SqlCommand(
-                $" SELECT * FROM Users " +
-                $" WHERE email='{email}' AND pass='{CommonMethods.ConvertToEncrypt(pass)}'", con);
+            $" SELECT * FROM Users " +
+            $" WHERE email=@email AND pass=@pass", con);
             comm.Connection.Open();
+            comm.Parameters.AddWithValue("@email", email);
+          //comm.Parameters.AddWithValue("@pass", CommonMethods.ConvertToEncrypt(pass));
+            comm.Parameters.AddWithValue("@pass", CommonMethods.HashString(pass));
+
+
             SqlDataReader reader = comm.ExecuteReader();
             if (reader.Read())
             {
@@ -64,7 +70,7 @@ namespace Draw.Models
                     (string)reader["first_name"],
                     (string)reader["last_name"],
                     (string)reader["email"],
-                    CommonMethods.ConvertToDecrypt((string)reader["pass"])
+                    CommonMethods.HashString((string)reader["pass"])
                     );
             }
             comm.Connection.Close();
@@ -81,8 +87,10 @@ namespace Draw.Models
             SqlConnection con = new SqlConnection(strCon);
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Users " +
-                $" WHERE email='{email}'", con);
+                $" WHERE email=@email", con);
             comm.Connection.Open();
+            comm.Parameters.AddWithValue("@email", email);
+
             SqlDataReader reader = comm.ExecuteReader();
             if (reader.Read())
             {
@@ -109,8 +117,10 @@ namespace Draw.Models
             SqlConnection con = new SqlConnection(strCon);
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Users " +
-                $" WHERE user_id='{user_id}'", con);
+                $" WHERE user_id=@user_id", con);
             comm.Connection.Open();
+            comm.Parameters.AddWithValue("@user_id", user_id);
+
             SqlDataReader reader = comm.ExecuteReader();
             if (reader.Read())
             {
@@ -141,7 +151,10 @@ namespace Draw.Models
                  $" N'{val.First_Name}'," +
                  $" N'{val.Last_Name}'," +
                  $" N'{val.Email}'," +
-                 $" N'{CommonMethods.ConvertToEncrypt(val.Pass)}'); ";
+               //  $" N'{CommonMethods.ConvertToEncrypt(val.Pass)}'); ";
+                 $" N'{CommonMethods.HashString(val.Pass)}'); ";
+
+
 
             strComm +=
                 " SELECT SCOPE_IDENTITY() AS[SCOPE_IDENTITY]; ";

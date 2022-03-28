@@ -32,8 +32,7 @@ namespace Draw.Models
                 Canvases c = new Canvases(
                     (int)reader["canvas_id"],
                     (int)reader["user_id"],
-                    (string)reader["canvas_path"],
-                    (string)reader["canvas_coordinates"]
+                    (string)reader["canvas_path"]
                     );
                 cl.Add(c);
             }
@@ -54,16 +53,16 @@ namespace Draw.Models
             SqlConnection con = new SqlConnection(strCon);
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Canvases " +
-                $" WHERE user_id='{user_id}' ", con);
+                $" WHERE user_id=@user_id ", con);
             comm.Connection.Open();
+            comm.Parameters.AddWithValue("@user_id", user_id);
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
                 Canvases c = new Canvases(
                     (int)reader["canvas_id"],
                     (int)reader["user_id"],
-                    (string)reader["canvas_path"],
-                    (string)reader["canvas_coordinates"]
+                    (string)reader["canvas_path"]
                     );
                 cl.Add(c);
             }
@@ -81,16 +80,16 @@ namespace Draw.Models
             SqlConnection con = new SqlConnection(strCon);
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Canvases " +
-                $" WHERE canvas_id='{canvas_id}' ", con);
+                $" WHERE canvas_id=@canvas_id ", con);
             comm.Connection.Open();
+            comm.Parameters.AddWithValue("@canvas_id", canvas_id);
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
                 c = new Canvases(
                     (int)reader["canvas_id"],
                     (int)reader["user_id"],
-                    (string)reader["canvas_path"],
-                    (string)reader["canvas_coordinates"]
+                    (string)reader["canvas_path"]
                    );
             }
             comm.Connection.Close();
@@ -106,10 +105,9 @@ namespace Draw.Models
         {
 
             string strComm =
-                 $" INSERT INTO Canvases(user_id, canvas_path, canvas_coordinates) VALUES(" +
+                 $" INSERT INTO Canvases(user_id, canvas_path) VALUES(" +
                  $" {val.User_ID}," +
-                 $" N'{val.Canvas_Path}'," +
-                 $" N'{val.Canvas_Coordinates}'); ";
+                 $" N'{val.Canvas_Path}'); ";
 
             strComm +=
                 " SELECT SCOPE_IDENTITY() AS[SCOPE_IDENTITY]; ";
@@ -169,8 +167,7 @@ namespace Draw.Models
         {
             string strComm =
                   $" UPDATE Canvases SET " +
-                  $" canvas_path='{c.Canvas_Path}' , " +
-                  $" canvas_coordinates='{c.Canvas_Coordinates}'  " +
+                  $" canvas_path='{c.Canvas_Path}'  " +
                   $" WHERE canvas_id={c.Canvas_ID}";
 
             return ExcNonQ(strComm);
@@ -190,8 +187,7 @@ namespace Draw.Models
                 Canvases c = new Canvases(
                     (int)reader["canvas_id"],
                     (int)reader["user_id"],
-                    (string)reader["canvas_path"],
-                    (string)reader["canvas_coordinates"]
+                    (string)reader["canvas_path"]
                     );
                 cl.Add(c);
             }
