@@ -5,6 +5,8 @@ using System.Web;
 using System.Data.SqlClient;
 using System.Configuration;
 using Draw.EncryptDecrypt;
+using System.Text.RegularExpressions;
+
 
 
 
@@ -12,7 +14,16 @@ namespace Draw.Models
 {
     public class UsersDB
     {
-        string strCon = ConfigurationManager.ConnectionStrings["ShirleyServer"].ConnectionString;
+        public SqlConnection connect()
+        {
+            string conStr = ConfigurationManager.ConnectionStrings["ShirleyServer"].ConnectionString;
+            //string conStr = ConfigurationManager.ConnectionStrings["YarinServer"].ConnectionString;
+            SqlConnection con = new SqlConnection(conStr);
+            con.Open();
+            return con;
+        }
+
+
 
 
         public UsersDB()
@@ -25,9 +36,8 @@ namespace Draw.Models
         public List<Users> GetAllUsers()
         {
             List<Users> ul = new List<Users>();
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand("SELECT * FROM Users", con);
-            comm.Connection.Open();
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
@@ -40,10 +50,9 @@ namespace Draw.Models
                     );
                 ul.Add(u);
             }
-            comm.Connection.Close();
+            con.Close();
             return ul;
         }
-
 
 
 
@@ -52,16 +61,12 @@ namespace Draw.Models
         public Users GetUserByEmailAndPassword(string email, string pass)
         {
             Users u = null;
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(
             $" SELECT * FROM Users " +
             $" WHERE email=@email AND pass=@pass", con);
-            comm.Connection.Open();
             comm.Parameters.AddWithValue("@email", email);
-          //comm.Parameters.AddWithValue("@pass", CommonMethods.ConvertToEncrypt(pass));
             comm.Parameters.AddWithValue("@pass", CommonMethods.HashString(pass));
-
-
             SqlDataReader reader = comm.ExecuteReader();
             if (reader.Read())
             {
@@ -73,10 +78,9 @@ namespace Draw.Models
                     CommonMethods.HashString((string)reader["pass"])
                     );
             }
-            comm.Connection.Close();
+            con.Close();
             return u;
         }
-
 
 
 
@@ -84,11 +88,9 @@ namespace Draw.Models
         public Users GetUserByEmail(string email)
         {
             Users u = null;
-            SqlConnection con = new SqlConnection(strCon);
-            SqlCommand comm = new SqlCommand(
-                $" SELECT * FROM Users " +
-                $" WHERE email=@email", con);
-            comm.Connection.Open();
+            SqlConnection con = connect();
+            SqlCommand comm = new SqlCommand(null, con);
+            comm.CommandText = $"SELECT * FROM Users WHERE email=@email";
             comm.Parameters.AddWithValue("@email", email);
 
             SqlDataReader reader = comm.ExecuteReader();
@@ -102,11 +104,9 @@ namespace Draw.Models
                     (string)reader["pass"]
                     );
             }
-            comm.Connection.Close();
+            con.Close();
             return u;
         }
-
-
 
 
 
@@ -114,13 +114,10 @@ namespace Draw.Models
         public Users GetUserByID(int user_id)
         {
             Users u = null;
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Users " +
-                $" WHERE user_id=@user_id", con);
-            comm.Connection.Open();
-            comm.Parameters.AddWithValue("@user_id", user_id);
-
+                $" WHERE user_id='{user_id}'", con);
             SqlDataReader reader = comm.ExecuteReader();
             if (reader.Read())
             {
@@ -132,89 +129,135 @@ namespace Draw.Models
                     (string)reader["pass"]
                     );
             }
-            comm.Connection.Close();
+            con.Close();
             return u;
         }
 
 
 
 
-
         //INSERT USER
+      
+        static bool isValidDomain(string email)
+        {
+            return email.Split('@')[1].Split('.').Length > 1;
+        }
+
+        static bool IsValidEmail(string email)
+        {
+            var trimmedEmail = email.Trim();
+
+            if (trimmedEmail.EndsWith("."))
+            {
+                return false;
+            }
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+
+                return addr.Address == trimmedEmail && isValidDomain(email);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        public bool validateUser(Users val)
+        {
+            if ( val.Email == "" || val.Pass == "" || val.First_Name == "" || val.Last_Name == "")
+                return false;
+            if (!IsValidEmail(val.Email))
+                return false;
+            if (!validateFieldRegex(val.Pass, @"\A(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{7,14}\Z"))
+                return false;
+            if (GetUserByEmail(val.Email) != null)
+                return false;
+            return true;
+        }
+
+        private bool validateFieldRegex(string field, string regexStr)
+        {
+            Regex rgField = new Regex(regexStr);
+            return rgField.IsMatch(field);
+
+        }
         public int InsertUserToDb(Users val)
         {
-            //in case thers already a user with such email
-            if (GetUserByEmail(val.Email) != null) return -1;
+            if (!validateUser(val))
+                return -1;
 
             string strComm =
                  $" INSERT INTO Users(first_name, last_name, email, pass) VALUES(" +
-                 $" N'{val.First_Name}'," +
-                 $" N'{val.Last_Name}'," +
-                 $" N'{val.Email}'," +
-               //  $" N'{CommonMethods.ConvertToEncrypt(val.Pass)}'); ";
-                 $" N'{CommonMethods.HashString(val.Pass)}'); ";
-
-
+                 $" @first," +
+                 $" @last," +
+                 $" @mail," +
+                 $" @pass); ";
 
             strComm +=
                 " SELECT SCOPE_IDENTITY() AS[SCOPE_IDENTITY]; ";
 
-            return ExcReaderInsertUser(strComm);
+            ;
+
+            return ExcReaderInsertUser(strComm, val);
         }
 
 
 
-        public int ExcReaderInsertUser(string comm2Run)
+
+
+        public int ExcReaderInsertUser(string comm2Run, Users val)
         {
             int UserID = -1;
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(comm2Run, con);
-            comm.Connection.Open();
+
+            comm.Parameters.AddWithValue("@first", val.First_Name);
+            comm.Parameters.AddWithValue("@last", val.Last_Name);
+            comm.Parameters.AddWithValue("@mail", val.Email);
+            comm.Parameters.AddWithValue("@pass", CommonMethods.HashString(val.Pass));
             SqlDataReader reader = comm.ExecuteReader();
+
             while (reader.Read())
             {
                 UserID = int.Parse(reader["SCOPE_IDENTITY"].ToString());
             }
-            comm.Connection.Close();
+            con.Close();
             return UserID;
         }
 
 
 
 
-
-        //DELETE BY ID
+        //DELETE USER BY ID
+       
         public int DeleteUserByID(int user_id)
         {
             string strComm =
                     $" DELETE Users " +
-                    $" WHERE user_id={user_id}";
+                    $" WHERE user_id=@id";
 
-            return ExcNonQ(strComm);
+            return ExcNonQ(strComm, user_id);
         }
 
-
-
-        private int ExcNonQ(string comm2Run)
+        private int ExcNonQ(string comm2Run, int id)
         {
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(comm2Run, con);
-            comm.Connection.Open();
+            comm.Parameters.AddWithValue("@id", id);
             int res = comm.ExecuteNonQuery();
-            comm.Connection.Close();
+            con.Close();
             return res;
         }
-
 
 
         public List<Users> ExcReader(string comm2Run)
         {
             List<Users> ul = new List<Users>();
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(comm2Run, con);
-            comm.Connection.Open();
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
+
             {
                 Users u = new Users(
                     (int)reader["user_id"],
@@ -225,7 +268,7 @@ namespace Draw.Models
                     );
                 ul.Add(u);
             }
-            comm.Connection.Close();
+            con.Close();
             return ul;
         }
 

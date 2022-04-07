@@ -12,7 +12,7 @@ namespace Draw.EncryptDecrypt
     {
 
 
-        //SHA245 Cryptographically
+        //SHA256 Cryptographically
         public static string HashString(string passwordString)
         {
             StringBuilder sb = new StringBuilder();

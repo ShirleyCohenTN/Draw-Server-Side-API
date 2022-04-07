@@ -10,8 +10,14 @@ namespace Draw.Models
     public class CanvasesDB
     {
 
-        string strCon = ConfigurationManager.ConnectionStrings["ShirleyServer"].ConnectionString;
-
+        public SqlConnection connect()
+        {
+            string conStr = ConfigurationManager.ConnectionStrings["ShirleyServer"].ConnectionString;
+            //string conStr = ConfigurationManager.ConnectionStrings["YarinServer"].ConnectionString;
+            SqlConnection con = new SqlConnection(conStr);
+            con.Open();
+            return con;
+        }
 
         public CanvasesDB()
         {
@@ -23,9 +29,8 @@ namespace Draw.Models
         public List<Canvases> GetAllCanvases()
         {
             List<Canvases> cl = new List<Canvases>();
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand("SELECT * FROM Canvases", con);
-            comm.Connection.Open();
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
@@ -36,26 +41,20 @@ namespace Draw.Models
                     );
                 cl.Add(c);
             }
-            comm.Connection.Close();
+            con.Close();
             return cl;
         }
-
-
-
-
-
 
         //BY USER_ID(the one who published it)
         //LIST OF CANVASES THAT WERE CREATED BY A SPESIFIC USER
         public List<Canvases> GetAllCanvasesByUser(int user_id)
         {
             List<Canvases> cl = new List<Canvases>();
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Canvases " +
-                $" WHERE user_id=@user_id ", con);
-            comm.Connection.Open();
-            comm.Parameters.AddWithValue("@user_id", user_id);
+                $" WHERE user_id=@id", con);
+            comm.Parameters.AddWithValue("@id", user_id);
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
@@ -66,23 +65,20 @@ namespace Draw.Models
                     );
                 cl.Add(c);
             }
-            comm.Connection.Close();
+            con.Close();
             return cl;
         }
-
-
-
 
         //GET CANVAS BY CANVAS_ID
         public Canvases GetCanvasByID(int canvas_id)
         {
             Canvases c = new Canvases();
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(
                 $" SELECT * FROM Canvases " +
-                $" WHERE canvas_id=@canvas_id ", con);
-            comm.Connection.Open();
-            comm.Parameters.AddWithValue("@canvas_id", canvas_id);
+                $" WHERE canvas_id=@canvasId", con);
+            comm.Parameters.AddWithValue("@canvasId", canvas_id);
+
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
@@ -92,49 +88,40 @@ namespace Draw.Models
                     (string)reader["canvas_path"]
                    );
             }
-            comm.Connection.Close();
+            con.Close();
             return c;
         }
-
-
-
-
 
         //INSERT POST
         public int InsertCanvasToDb(Canvases val)
         {
-
             string strComm =
-                 $" INSERT INTO Canvases(user_id, canvas_path) VALUES(" +
-                 $" {val.User_ID}," +
-                 $" N'{val.Canvas_Path}'); ";
+          $" INSERT INTO Canvases(user_id, canvas_path) VALUES(" +
+          $" @id," +
+          $" @path); ";
 
             strComm +=
                 " SELECT SCOPE_IDENTITY() AS[SCOPE_IDENTITY]; ";
 
-            return ExcReaderInsertCanvas(strComm);
+            return ExcReaderInsertCanvas(strComm, val);
         }
 
-
-
-        public int ExcReaderInsertCanvas(string comm2Run)
+        public int ExcReaderInsertCanvas(string comm2Run, Canvases val)
         {
             //int CanvasID = -10;
             int CanvasID = -1;
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(comm2Run, con);
-            comm.Connection.Open();
+            comm.Parameters.AddWithValue("@id", val.User_ID);
+            comm.Parameters.AddWithValue("@path", val.Canvas_Path);
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
                 CanvasID = int.Parse(reader["SCOPE_IDENTITY"].ToString());
             }
-            comm.Connection.Close();
+            con.Close();
             return CanvasID;
         }
-
-
-
 
 
         //DELETE BY ID
@@ -142,45 +129,46 @@ namespace Draw.Models
         {
             string strComm =
                     $" DELETE Canvases " +
-                    $" WHERE canvas_id={canvas_id}";
+                    $" WHERE canvas_id=@id";
 
-            return ExcNonQ(strComm);
+            return ExcNonQ(strComm, canvas_id);
         }
 
-
-
-        private int ExcNonQ(string comm2Run)
+        private int ExcNonQ(string comm2Run, int id)
         {
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(comm2Run, con);
-            comm.Connection.Open();
+            comm.Parameters.AddWithValue("@id", id);
             int res = comm.ExecuteNonQuery();
-            comm.Connection.Close();
+            con.Close();
             return res;
         }
-
-
-
-
+        private int ExcNonQUpdate(string comm2Run, Canvases c)
+        {
+            SqlConnection con = connect();
+            SqlCommand comm = new SqlCommand(comm2Run, con);
+            comm.Parameters.AddWithValue("@id", c.Canvas_ID);
+            comm.Parameters.AddWithValue("@path", c.Canvas_Path);
+            int res = comm.ExecuteNonQuery();
+            con.Close();
+            return res;
+        }
         //UPDATE Canvas drawing 
         public int UpdateCanvas(Canvases c)
         {
             string strComm =
                   $" UPDATE Canvases SET " +
-                  $" canvas_path='{c.Canvas_Path}'  " +
-                  $" WHERE canvas_id={c.Canvas_ID}";
+                  $" canvas_path=@path  " +
+                  $" WHERE canvas_id=@id";
 
-            return ExcNonQ(strComm);
+            return ExcNonQUpdate(strComm, c);
         }
-
-
 
         public List<Canvases> ExcReader(string comm2Run)
         {
             List<Canvases> cl = new List<Canvases>();
-            SqlConnection con = new SqlConnection(strCon);
+            SqlConnection con = connect();
             SqlCommand comm = new SqlCommand(comm2Run, con);
-            comm.Connection.Open();
             SqlDataReader reader = comm.ExecuteReader();
             while (reader.Read())
             {
@@ -191,7 +179,7 @@ namespace Draw.Models
                     );
                 cl.Add(c);
             }
-            comm.Connection.Close();
+            con.Close();
             return cl;
         }
 
